@@ -173,10 +173,10 @@ def visualize_results(input_folder, output_folder):
 if __name__ == "__main__":
     # Generate interpolated dataset
     generate_interpolated_dataset(
-        input_folder="data",
+        input_folder="training_data",
         output_folder="data_interpolated",
         num_samples=100,
         min_concentration=10,
-        max_concentration=100,
+        max_concentration=60,
         target_size=(48, 48)
     )
