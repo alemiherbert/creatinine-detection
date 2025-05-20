@@ -176,7 +176,7 @@ if __name__ == "__main__":
         input_folder="training_data",
         output_folder="data_interpolated",
         num_samples=100,
-        min_concentration=10,
+        min_concentration=0,
         max_concentration=60,
         target_size=(48, 48)
     )
