@@ -4,7 +4,37 @@ import numpy as np
 import matplotlib.pyplot as plt
 import re
 import argparse
+import sys
 from matplotlib.gridspec import GridSpec
+
+def is_colab():
+    """Check if running in Google Colab"""
+    return 'google.colab' in sys.modules
+
+def get_save_path(filename):
+    """Get appropriate save path depending on environment"""
+    if is_colab():
+        # Try to use Google Drive if mounted
+        try:
+            from google.colab import drive
+            
+            # Check if drive is already mounted
+            drive_content = os.listdir('/content/drive') if os.path.exists('/content/drive') else []
+            if not drive_content:
+                print("Mounting Google Drive...")
+                drive.mount('/content/drive')
+            
+            # Create directory if it doesn't exist
+            save_dir = '/content/drive/MyDrive/creatinine_detection'
+            os.makedirs(save_dir, exist_ok=True)
+            
+            save_path = os.path.join(save_dir, filename)
+            return save_path
+        except Exception as e:
+            print(f"Could not save to Google Drive: {e}")
+            return filename  # Fall back to local save
+    else:
+        return filename  # Local save
 
 def visualize_color_histograms(dataset_path, img_ext='.jpg', samples_per_row=3, num_samples=None):
     """
@@ -108,8 +138,14 @@ def visualize_color_histograms(dataset_path, img_ext='.jpg', samples_per_row=3, 
         ax_hist.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('color_histograms.png', dpi=150, bbox_inches='tight')
+    
+    # Save figure to appropriate location
+    save_path = get_save_path('color_histograms.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Color histograms saved to {save_path}")
+    
     plt.show()
+    return save_path
 
 def visualize_feature_trends(dataset_path, img_ext='.jpg'):
     """
@@ -144,7 +180,7 @@ def visualize_feature_trends(dataset_path, img_ext='.jpg'):
     
     if not data:
         print("No valid images found.")
-        return
+        return None
     
     # Extract concentrations and prepare features arrays
     concentrations = [item[0] for item in data]
@@ -200,8 +236,14 @@ def visualize_feature_trends(dataset_path, img_ext='.jpg'):
         plt.legend()
     
     plt.tight_layout()
-    plt.savefig('color_trends.png', dpi=150)
+    
+    # Save figure to appropriate location
+    save_path = get_save_path('color_trends.png')
+    plt.savefig(save_path, dpi=150)
+    print(f"Color trends saved to {save_path}")
+    
     plt.show()
+    return save_path
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize color histograms from training data")
@@ -209,6 +251,7 @@ def main():
     parser.add_argument("--samples", type=int, default=9, help="Number of samples to display")
     parser.add_argument("--columns", type=int, default=3, help="Number of samples per row")
     parser.add_argument("--trends", action="store_true", help="Visualize feature trends")
+    parser.add_argument("--save-to-drive", action="store_true", help="Force saving to Google Drive")
     args = parser.parse_args()
     
     try:
@@ -217,16 +260,29 @@ def main():
             print(f"Error: Dataset path '{args.dataset}' not found")
             return
         
+        # Mount Drive if requested and in Colab
+        if args.save_to_drive and is_colab():
+            try:
+                from google.colab import drive
+                drive.mount('/content/drive')
+                print("Google Drive mounted successfully.")
+            except Exception as e:
+                print(f"Could not mount Google Drive: {e}")
+        
         # Visualize histograms
         print(f"Generating color histograms for {args.samples} samples...")
-        visualize_color_histograms(args.dataset, samples_per_row=args.columns, num_samples=args.samples)
+        hist_path = visualize_color_histograms(args.dataset, samples_per_row=args.columns, num_samples=args.samples)
         
         # Visualize trends if requested
         if args.trends:
             print("Generating color trend analysis...")
-            visualize_feature_trends(args.dataset)
+            trend_path = visualize_feature_trends(args.dataset)
             
-        print("Visualization complete. Images saved to color_histograms.png and color_trends.png")
+        print("Visualization complete.")
+        if args.trends:
+            print(f"Images saved to: {hist_path}, {trend_path}")
+        else:
+            print(f"Image saved to: {hist_path}")
             
     except Exception as e:
         print(f"Error during visualization: {e}")
